@@ -88,8 +88,26 @@ func Login(c *gin.Context) {
 
 func Get(c *gin.Context) {
 	var users []models.User
-	database.DB.Find(&users)
+	database.DB.Where("deleted_at IS NULL").Find(&users)
 	c.JSON(http.StatusOK, users)
+}
+
+func GetDeletedUser(c *gin.Context) {
+	var users []models.User
+	database.DB.Unscoped().Where("deleted_at IS NOT NULL").Find(&users)
+	c.JSON(http.StatusOK, users)
+}
+
+func Restore(c *gin.Context) {
+	idParam := c.Param("id")
+	userID, err := uuid.Parse(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid User ID"})
+		return
+	}
+
+	database.DB.Unscoped().Model(&models.User{}).Where("id = ?", userID).Update("deleted_at", nil)
+	c.JSON(http.StatusOK, gin.H{"message": "User restored succesfully"})
 }
 
 func Update(c *gin.Context) {
